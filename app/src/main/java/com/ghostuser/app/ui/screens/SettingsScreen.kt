@@ -1,6 +1,8 @@
 package com.ghostuser.app.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,12 +42,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.ghostuser.app.data.AppSettings
 import com.ghostuser.app.data.EngineMode
+import com.ghostuser.app.data.MacroRepository
+import com.ghostuser.app.data.MacroTransfer
 import com.ghostuser.app.data.SettingsStore
 import com.ghostuser.app.data.ThemeMode
 import com.ghostuser.app.engine.EngineProvider
 import com.ghostuser.app.engine.RootShell
 import com.ghostuser.app.service.ServiceUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +64,47 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var interval by remember(settings.defaultIntervalMs) {
         mutableStateOf(settings.defaultIntervalMs.toString())
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val macros = MacroRepository.macros.value
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use {
+                        it.write(MacroTransfer.export(macros).toByteArray())
+                    }
+                }.isSuccess
+            }
+            Toast.makeText(
+                context,
+                if (ok) "Exported ${macros.size} macro(s)" else "Export failed",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                }.getOrNull()
+            }
+            val macros = text?.let { MacroTransfer.parse(it) } ?: emptyList()
+            if (macros.isEmpty()) {
+                Toast.makeText(context, "No macros found in that file", Toast.LENGTH_SHORT).show()
+            } else {
+                val n = MacroRepository.importMacros(macros)
+                Toast.makeText(context, "Imported $n macro(s)", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     Scaffold(
@@ -153,6 +200,35 @@ fun SettingsScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            // Backup & sharing
+            SettingSection("Backup & sharing") {
+                Text(
+                    "Export all macros to a JSON file, or import macros from one. " +
+                        "Imports are added alongside your existing macros.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.size(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            if (MacroRepository.macros.value.isEmpty()) {
+                                Toast.makeText(context, "No macros to export", Toast.LENGTH_SHORT).show()
+                            } else {
+                                exportLauncher.launch("ghostuser-macros.json")
+                            }
+                        },
+                    ) { Text("Export all") }
+                    OutlinedButton(
+                        onClick = {
+                            importLauncher.launch(
+                                arrayOf("application/json", "text/plain", "application/octet-stream")
+                            )
+                        },
+                    ) { Text("Import") }
+                }
             }
         }
     }

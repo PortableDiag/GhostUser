@@ -79,4 +79,25 @@ object MacroRepository {
     }
 
     fun newId(): String = "macro_" + System.currentTimeMillis().toString(36)
+
+    /**
+     * Appends imported macros, always assigning fresh unique ids so an import can
+     * never overwrite an existing macro (even if the file was exported from this
+     * same device). Returns how many were added.
+     */
+    fun importMacros(incoming: List<Macro>): Int {
+        if (incoming.isEmpty()) return 0
+        val used = _macros.value.map { it.id }.toMutableSet()
+        var counter = 0
+        fun uniqueId(): String {
+            var id: String
+            do {
+                id = "macro_" + System.currentTimeMillis().toString(36) + "_" + (counter++)
+            } while (!used.add(id))
+            return id
+        }
+        _macros.value = _macros.value + incoming.map { it.copy(id = uniqueId()) }
+        persist()
+        return incoming.size
+    }
 }

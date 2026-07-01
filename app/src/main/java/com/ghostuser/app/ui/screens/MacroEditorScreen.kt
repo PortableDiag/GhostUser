@@ -1,6 +1,7 @@
 package com.ghostuser.app.ui.screens
 
 import android.app.Activity
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -48,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.text.KeyboardOptions
 import com.ghostuser.app.data.MacroRepository
+import com.ghostuser.app.data.MacroTransfer
 import com.ghostuser.app.model.Macro
 import com.ghostuser.app.model.Step
 import com.ghostuser.app.model.StepType
@@ -98,19 +101,30 @@ fun MacroEditorScreen(
         holders.add(StepHolder(keyGen.getAndIncrement(), step))
     }
 
+    fun buildMacro(): Macro = Macro(
+        id = existing?.id ?: MacroRepository.newId(),
+        name = name.trim().ifBlank { "Untitled" },
+        steps = holders.map { it.step },
+        loop = loop,
+        loopCount = loopCount.toIntOrNull()?.coerceAtLeast(0) ?: 0,
+        loopDelayMs = loopDelay.toLongOrNull()?.coerceAtLeast(0) ?: 0,
+    )
+
     fun save() {
-        val steps = holders.map { it.step }
-        val macro = Macro(
-            id = existing?.id ?: MacroRepository.newId(),
-            name = name.trim().ifBlank { "Untitled" },
-            steps = steps,
-            loop = loop,
-            loopCount = loopCount.toIntOrNull()?.coerceAtLeast(0) ?: 0,
-            loopDelayMs = loopDelay.toLongOrNull()?.coerceAtLeast(0) ?: 0,
-        )
+        val macro = buildMacro()
         MacroRepository.upsert(macro)
         OverlayBus.selectMacro(macro.id)
         onDone()
+    }
+
+    fun share() {
+        val macro = buildMacro()
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_TEXT, MacroTransfer.export(listOf(macro)))
+            putExtra(Intent.EXTRA_SUBJECT, "${macro.name}.json")
+        }
+        context.startActivity(Intent.createChooser(send, "Share macro"))
     }
 
     Scaffold(
@@ -121,6 +135,11 @@ fun MacroEditorScreen(
                 navigationIcon = {
                     IconButton(onClick = onDone) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { share() }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share macro")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
