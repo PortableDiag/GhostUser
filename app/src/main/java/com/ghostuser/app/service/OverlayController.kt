@@ -210,6 +210,14 @@ class OverlayController(private val service: AccessibilityService) {
         val collapse = glyph("▽", onDark)
         collapse.setOnClickListener { expanded = false; renderPanel() }
 
+        val close = glyph("✕", danger)
+        close.setOnClickListener {
+            PlaybackController.stop()
+            if (OverlayBus.recording.value) stopRecording()
+            removePanel()
+            toast("Controls hidden — reopen from the GhostUser app")
+        }
+
         return LinearLayout(service).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -226,6 +234,7 @@ class OverlayController(private val service: AccessibilityService) {
             addView(stop)
             addView(app)
             addView(collapse)
+            addView(close)
         }
     }
 
