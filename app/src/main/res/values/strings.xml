@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GhostUser</string>
+    <string name="accessibility_service_label">GhostUser Gesture Engine</string>
+    <string name="accessibility_service_description">Allows GhostUser to play back your recorded taps, swipes and macros by dispatching gestures on your behalf. No screen content is read or collected.</string>
+</resources>

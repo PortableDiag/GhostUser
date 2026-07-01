@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Light base theme used before Compose takes over (values-night supplies the
+        dark counterpart). Uses a framework theme so we don't need the Material
+        Components dependency.
+    -->
+    <style name="Theme.GhostUser" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/win_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

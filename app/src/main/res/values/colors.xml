@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pre-Compose window background (light). Overridden in values-night. -->
+    <color name="win_background">#F6F8FC</color>
+    <!-- Adaptive launcher icon background (same in both modes). -->
+    <color name="ic_background">#0E1014</color>
+    <color name="accent_blue">#2D6BFF</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
