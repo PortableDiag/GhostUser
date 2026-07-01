@@ -1,6 +1,8 @@
 package com.ghostuser.app.service
 
 import android.accessibilityservice.AccessibilityService
+import android.os.Handler
+import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,14 +23,31 @@ class GhostAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // Mark connected FIRST so the service counts as up even if the optional
+        // overlay setup below fails — the gesture engine works without it, and
+        // nothing here should be able to make the system tear the binding down.
         instance = this
         _connected.value = true
-        overlay = OverlayController(this).also { it.start() }
+        // Defer overlay creation off the connect callback and guard it: on some
+        // OEM ROMs adding a window during onServiceConnected can throw, which
+        // would otherwise crash the service and make the toggle flip back off.
+        Handler(Looper.getMainLooper()).post {
+            if (overlay == null) {
+                runCatching { OverlayController(this).also { it.start() } }
+                    .onSuccess { overlay = it }
+            }
+        }
     }
 
-    /** Re-show the floating panel (e.g. after the user closed it). */
+    /** Re-show the floating panel (e.g. after the user closed it, or if the
+     *  overlay failed to appear when the service connected). */
     fun showOverlayPanel() {
-        overlay?.showPanel()
+        if (overlay == null) {
+            runCatching { OverlayController(this).also { it.start() } }
+                .onSuccess { overlay = it }
+        } else {
+            overlay?.showPanel()
+        }
     }
 
     /** Enter the full-screen point-picker used by the macro editor. */
