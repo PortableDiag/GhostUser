@@ -16,6 +16,9 @@ preference.
 - **Floating control panel** drawn by the accessibility service itself using a
   `TYPE_ACCESSIBILITY_OVERLAY` window — so there's **no draw-over-apps permission
   prompt and no foreground-service notification**. Drag it, tap ▶/■ to play/stop.
+  It is shown **only when you ask for it** (the ⊕ control in the app's top bar)
+  and hidden when you dismiss it with ✕ — that choice is remembered across
+  reboots and app restarts.
 - **On-screen point picker** — tap targets directly on the screen to add them as
   taps to a macro. No pixel-coordinate guesswork.
 - **Loop controls** — repeat N times or forever, with a configurable interval
@@ -49,10 +52,13 @@ A release build reads signing creds from env vars (no hardcoded keys):
 
 1. Launch **GhostUser**.
 2. If the banner says the service is off, tap **Open accessibility settings** and
-   enable *GhostUser Gesture Engine*. The floating panel appears once enabled.
-3. (Optional, rooted) Settings ▸ **Test root access**, then pick engine *Root* or
+   enable *GhostUser Gesture Engine*.
+3. Tap the **floating-controls icon** in the top bar to put the panel on screen.
+   Enabling the service only grants the capability — the panel never appears on
+   its own, and ✕ on the panel puts it away for good until you ask again.
+4. (Optional, rooted) Settings ▸ **Test root access**, then pick engine *Root* or
    *Auto*.
-4. **New macro** ▸ **Pick tap points on screen** ▸ tap your targets ▸ **Done**.
+5. **New macro** ▸ **Pick tap points on screen** ▸ tap your targets ▸ **Done**.
    Set an interval, **Save**, then ▶ from the list or the floating panel.
 
 ## Architecture
@@ -63,13 +69,21 @@ data/         MacroRepository (JSON file), SettingsStore (DataStore)
 engine/       GestureEngine + Accessibility/Root impls, EngineProvider,
               PlaybackController (the global play/stop loop)
 service/      GhostAccessibilityService (instance + overlay host),
-              OverlayController (panel + point picker), OverlayBus
+              OverlayController (panel + point picker), OverlayBus,
+              OverlayPrefs (is the panel wanted on screen?)
 ui/           Compose screens (Home / Editor / Settings) + house theme
 ```
 
 The accessibility service, floating overlay, and app UI all share the same
 process-wide singletons (`MacroRepository`, `PlaybackController`, `OverlayBus`),
 so state stays in sync without any IPC.
+
+**Panel visibility is a user decision, not a side effect of the service running.**
+The system binds an enabled accessibility service on boot, after an app update,
+and whenever it restarts the process — so `onServiceConnected()` must never show a
+window on its own. It restores the panel only if `OverlayPrefs.visible` says the
+user left it showing (SharedPreferences, so the service can read it synchronously
+while connecting).
 
 ## Notes & limits (v1)
 

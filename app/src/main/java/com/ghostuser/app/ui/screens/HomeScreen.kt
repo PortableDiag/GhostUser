@@ -47,6 +47,7 @@ import com.ghostuser.app.model.Macro
 import com.ghostuser.app.model.StepType
 import com.ghostuser.app.service.GhostAccessibilityService
 import com.ghostuser.app.service.OverlayBus
+import com.ghostuser.app.service.OverlayPrefs
 import com.ghostuser.app.service.ServiceUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +62,7 @@ fun HomeScreen(
     val isPlaying by PlaybackController.isPlaying.collectAsStateWithLifecycle()
     val activeId by PlaybackController.activeMacroId.collectAsStateWithLifecycle()
     val serviceConnected by GhostAccessibilityService.connected.collectAsStateWithLifecycle()
+    val panelVisible by OverlayPrefs.visible.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -70,18 +72,37 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = {
                         val svc = GhostAccessibilityService.instance
-                        if (svc != null) {
-                            svc.showOverlayPanel()
-                            Toast.makeText(context, "Floating controls shown", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(
+                        when {
+                            svc == null -> Toast.makeText(
                                 context,
                                 "Enable the accessibility service first",
                                 Toast.LENGTH_LONG,
                             ).show()
+
+                            panelVisible -> {
+                                svc.hideOverlayPanel()
+                                Toast.makeText(context, "Floating controls hidden", Toast.LENGTH_SHORT).show()
+                            }
+
+                            else -> {
+                                svc.showOverlayPanel()
+                                Toast.makeText(context, "Floating controls shown", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }) {
-                        Icon(Icons.Filled.ControlCamera, contentDescription = "Show floating controls")
+                        Icon(
+                            Icons.Filled.ControlCamera,
+                            contentDescription = if (panelVisible) {
+                                "Hide floating controls"
+                            } else {
+                                "Show floating controls"
+                            },
+                            tint = if (panelVisible) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")

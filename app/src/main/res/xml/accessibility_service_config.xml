@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    onAccessibilityEvent() is an empty stub — this service exists to dispatch
+    gestures and host overlay windows, not to observe. So we subscribe to the
+    minimum viable event type rather than typeAllMask, which had the system
+    marshalling every event in the OS to a listener that discards them.
+    Nothing in the app reads these events; a ROM that misbehaves with a narrow
+    subscription can be put back on typeAllMask without affecting behaviour.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
     android:canPerformGestures="true"

@@ -28,31 +28,45 @@ class GhostAccessibilityService : AccessibilityService() {
         // nothing here should be able to make the system tear the binding down.
         instance = this
         _connected.value = true
-        // Defer overlay creation off the connect callback and guard it: on some
-        // OEM ROMs adding a window during onServiceConnected can throw, which
-        // would otherwise crash the service and make the toggle flip back off.
-        Handler(Looper.getMainLooper()).post {
-            if (overlay == null) {
-                runCatching { OverlayController(this).also { it.start() } }
-                    .onSuccess { overlay = it }
-            }
+        // Connecting is NOT a request for the panel. The system binds us on boot,
+        // after an app update, and whenever it restarts our process — showing the
+        // panel here put it on screen with the user having done nothing. Restore
+        // it only if they left it showing.
+        if (OverlayPrefs.visible.value) {
+            // Deferred and guarded: on some OEM ROMs adding a window during
+            // onServiceConnected can throw, which would crash the service and make
+            // the accessibility toggle flip back off.
+            Handler(Looper.getMainLooper()).post { ensureOverlay()?.showPanel() }
         }
     }
 
-    /** Re-show the floating panel (e.g. after the user closed it, or if the
-     *  overlay failed to appear when the service connected). */
+    /** Show the floating panel and remember that the user wants it. */
     fun showOverlayPanel() {
-        if (overlay == null) {
-            runCatching { OverlayController(this).also { it.start() } }
-                .onSuccess { overlay = it }
-        } else {
-            overlay?.showPanel()
-        }
+        OverlayPrefs.setVisible(true)
+        ensureOverlay()?.showPanel()
+    }
+
+    /** Hide the floating panel and remember that the user dismissed it. */
+    fun hideOverlayPanel() {
+        OverlayPrefs.setVisible(false)
+        overlay?.hidePanel()
     }
 
     /** Enter the full-screen point-picker used by the macro editor. */
     fun startPointPicker() {
-        overlay?.startPointPicker()
+        ensureOverlay()?.startPointPicker()
+    }
+
+    /**
+     * The overlay host, created on demand. Constructing it draws nothing — windows
+     * are added only by [OverlayController.showPanel] / [OverlayController.startPointPicker] —
+     * so the picker still works even when the panel is hidden.
+     */
+    private fun ensureOverlay(): OverlayController? {
+        overlay?.let { return it }
+        return runCatching { OverlayController(this).also { it.start() } }
+            .onSuccess { overlay = it }
+            .getOrNull()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

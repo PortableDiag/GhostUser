@@ -42,11 +42,12 @@ import kotlin.math.roundToInt
  *
  * The control surface has two forms sharing one movable window:
  *  - a small draggable **bubble** (tap to expand, drag to move)
- *  - an expanded **control row**: Record · Start · Stop · Open app · Collapse
+ *  - an expanded **control row**: Record · Start · Loop · Stop · Open app · Collapse · Close
  *
- * Collapsing returns to the bubble; the window is never fully removed by the
- * user, so the controls can't get "lost". A separate full-screen layer is used
- * for the editor's point picker and for gesture recording.
+ * Collapsing returns to the bubble; ✕ removes the window entirely and records that
+ * in [OverlayPrefs], so it stays gone until the user asks for it again from the app.
+ * Nothing here shows a window on its own — see [start]. A separate full-screen layer
+ * is used for the editor's point picker and for gesture recording.
  */
 class OverlayController(private val service: AccessibilityService) {
 
@@ -97,8 +98,12 @@ class OverlayController(private val service: AccessibilityService) {
 
     // ---- lifecycle -------------------------------------------------------
 
+    /**
+     * Wire up state observation. Deliberately draws nothing: the panel appears only
+     * when the user asks for it via [showPanel], so a service (re)connect on boot or
+     * after a process restart can't put it on screen by itself.
+     */
     fun start() {
-        ensureShown()
         scope.launch {
             combine(PlaybackController.isPlaying, OverlayBus.recording) { playing, recording ->
                 playing to recording
@@ -119,8 +124,8 @@ class OverlayController(private val service: AccessibilityService) {
 
     // ---- movable control window -----------------------------------------
 
-    /** Public entry: make sure the control window exists (as a bubble). */
-    fun ensureShown() {
+    /** Put the control window on screen (as a bubble) if it isn't already. */
+    fun showPanel() {
         if (panel == null) {
             expanded = false
             addPanelWindow()
@@ -128,7 +133,8 @@ class OverlayController(private val service: AccessibilityService) {
         renderPanel()
     }
 
-    fun showPanel() = ensureShown()
+    /** Take the control window off screen. Playback and the picker are unaffected. */
+    fun hidePanel() = removePanel()
 
     private fun addPanelWindow() {
         val container = FrameLayout(service)
@@ -214,6 +220,9 @@ class OverlayController(private val service: AccessibilityService) {
         close.setOnClickListener {
             PlaybackController.stop()
             if (OverlayBus.recording.value) stopRecording()
+            // Persist the dismissal, or the next service rebind (boot, app update,
+            // process restart) would bring the panel straight back.
+            OverlayPrefs.setVisible(false)
             removePanel()
             toast("Controls hidden — reopen from the GhostUser app")
         }
@@ -280,6 +289,7 @@ class OverlayController(private val service: AccessibilityService) {
         panelParams = null
         recButton = null
         startButton = null
+        loopButton = null
     }
 
     // ---- point picker (used by the macro editor) ------------------------
