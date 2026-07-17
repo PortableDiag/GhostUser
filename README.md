@@ -37,6 +37,9 @@ machine that has them (or open in Android Studio):
 ### Command line
 
 ```bash
+git clone https://github.com/PortableDiag/GhostUser.git
+cd GhostUser
+
 # Point at your SDK (once):
 echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
