@@ -15,24 +15,42 @@ preference.
   - *Auto* — prefers root when granted, otherwise falls back to accessibility.
 - **Floating control panel** drawn by the accessibility service itself using a
   `TYPE_ACCESSIBILITY_OVERLAY` window — so there's **no draw-over-apps permission
-  prompt and no foreground-service notification**. Drag it, tap ▶/■ to play/stop.
-  It is shown **only when you ask for it** (the ⊕ control in the app's top bar)
-  and hidden when you dismiss it with ✕ — that choice is remembered across
-  reboots and app restarts.
+  prompt and no foreground-service notification**. It rides as a small draggable
+  bubble; tap it to expand a control row:
+
+  | | |
+  |---|---|
+  | ⠿ | grip — drag to move the panel |
+  | ● | start/stop **recording** a gesture sequence |
+  | ▶ / ■ | play/stop the selected macro |
+  | ⟳ | loop override — on, ▶ repeats forever; off, it runs once |
+  | ■ | stop playback (and stop recording) |
+  | ☰ | open the GhostUser app |
+  | ▽ | collapse back to the bubble |
+  | ✕ | dismiss the panel entirely |
+
+  The panel is shown **only when you ask for it** (the floating-controls icon in
+  the app's top bar) and stays gone once you dismiss it with ✕ — that choice is
+  remembered across reboots and app restarts.
+- **On-screen gesture recorder** — hit ● and use the screen normally. Taps, long
+  presses and swipes are captured with the real pauses between them and saved as
+  a macro you can replay or edit.
 - **On-screen point picker** — tap targets directly on the screen to add them as
   taps to a macro. No pixel-coordinate guesswork.
 - **Loop controls** — repeat N times or forever, with a configurable interval
   (the core auto-clicker knob).
+- **Import / export** — Settings ▸ *Backup & sharing* writes every macro to a
+  JSON file and reads them back through the system document picker; the editor
+  can share a single macro. Imports are always appended with fresh ids, so they
+  can never overwrite what you already have.
 - House dark theme: near-black surface, gold accent, selectable accent palette.
 
 ## Requirements to build
 
-This machine has `adb` but **no JDK / Android SDK / Gradle**, so build on a
-machine that has them (or open in Android Studio):
-
-- Android Studio (Koala or newer), **or** command-line SDK + JDK 17.
-- Compile SDK 34, min SDK 26, target 34. Gradle wrapper 8.5, AGP 8.2.2,
-  Kotlin 1.9.24.
+- JDK 17, and the Android SDK (Android Studio Koala or newer, or the
+  command-line tools).
+- Compile SDK 34, min SDK 26, target 34. Gradle wrapper 8.11.1, AGP 8.2.2,
+  Kotlin 1.9.24, Compose compiler 1.5.14.
 
 ### Command line
 
@@ -49,7 +67,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 A release build reads signing creds from env vars (no hardcoded keys):
 `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, with the keystore at
-`ghostuser-release.jks` in the project root.
+`ghostuser-release.jks` in the project root. There is deliberately no fallback —
+a forgotten `export` fails the build loudly rather than signing with a weak key.
+
+```bash
+source ./signing.env               # or export the three vars yourself
+./gradlew assembleRelease          # -> app/build/outputs/apk/release/app-release.apk
+```
 
 ## First run
 
@@ -61,19 +85,24 @@ A release build reads signing creds from env vars (no hardcoded keys):
    its own, and ✕ on the panel puts it away for good until you ask again.
 4. (Optional, rooted) Settings ▸ **Test root access**, then pick engine *Root* or
    *Auto*.
-5. **New macro** ▸ **Pick tap points on screen** ▸ tap your targets ▸ **Done**.
-   Set an interval, **Save**, then ▶ from the list or the floating panel.
+5. Build a macro either way:
+   - **Record it** — expand the panel, tap **●**, perform the gesture on screen,
+     tap **Done**. It's saved and selected, ready for ▶.
+   - **Build it** — **New macro** ▸ **Pick tap points on screen** ▸ tap your
+     targets ▸ **Done**. Set an interval, **Save**, then ▶ from the list or the
+     floating panel.
 
 ## Architecture
 
 ```
 model/        Macro + Step (flat, @Serializable)
-data/         MacroRepository (JSON file), SettingsStore (DataStore)
-engine/       GestureEngine + Accessibility/Root impls, EngineProvider,
-              PlaybackController (the global play/stop loop)
+data/         MacroRepository (JSON file), SettingsStore (DataStore),
+              MacroTransfer (import/export envelope)
+engine/       GestureEngine + Accessibility/Root impls, RootShell,
+              EngineProvider, PlaybackController (the global play/stop loop)
 service/      GhostAccessibilityService (instance + overlay host),
-              OverlayController (panel + point picker), OverlayBus,
-              OverlayPrefs (is the panel wanted on screen?)
+              OverlayController (panel + recorder + point picker), OverlayBus,
+              OverlayPrefs (is the panel wanted on screen?), ServiceUtils
 ui/           Compose screens (Home / Editor / Settings) + house theme
 ```
 
@@ -94,5 +123,10 @@ while connecting).
   line up in landscape or on a different resolution.
 - Non-root playback cannot inject into apps that flag secure/`FLAG_SECURE`
   surfaces or explicitly reject synthetic gestures; use the root engine there.
-- The point picker captures taps over whatever is behind it; navigate to your
-  target app/screen first, then start picking.
+- The point picker and the recorder capture touches over whatever is behind them,
+  and the app underneath receives nothing while they are up. Navigate to your
+  target app/screen first, then start picking or recording.
+- The service declares `canRetrieveWindowContent="false"` and
+  `onAccessibilityEvent()` is an empty stub. GhostUser never reads what is on
+  your screen; it only dispatches gestures and hosts its own windows.
+- There are no automated tests and no CI.
