@@ -43,7 +43,10 @@ preference.
   JSON file and reads them back through the system document picker; the editor
   can share a single macro. Imports are always appended with fresh ids, so they
   can never overwrite what you already have.
-- House dark theme: near-black surface, gold accent, selectable accent palette.
+- Material 3 **DayNight** theme with a blue primary (`#2D6BFF` light,
+  `#AEC6FF` dark). Follows the system by default; forceable to light or dark in
+  Settings. The floating panel always draws on a dark translucent pill, so it
+  keeps its own brighter accent (`#4C8DFF`) for contrast on any wallpaper.
 
 ## Requirements to build
 
