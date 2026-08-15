@@ -257,6 +257,13 @@ class OverlayController(private val service: AccessibilityService) {
     }
 
     private fun onStartPressed() {
+        // The mirror of the guard in startRecording(): a capture layer swallows
+        // every touch, so playing into one would feed the recorder/picker the
+        // app's own injected gestures instead of the user's.
+        if (capture != null) {
+            toast("Finish recording or picking points first")
+            return
+        }
         val id = OverlayBus.selectedMacroId.value
             ?: MacroRepository.macros.value.firstOrNull()?.id
         val macro = id?.let { MacroRepository.get(it) }
@@ -321,6 +328,16 @@ class OverlayController(private val service: AccessibilityService) {
 
     fun startRecording() {
         if (capture != null) return
+        // Playback injects its own gestures, and the capture layer sees them
+        // exactly like a finger. Recording through a running macro therefore
+        // captures the app's own taps and — because a gesture is tracked with a
+        // single down-point — interleaves them with the user's, producing
+        // swipes that start at the playback's point and end at the user's. Stop
+        // playback rather than record a macro that was never performed.
+        if (PlaybackController.isPlaying.value) {
+            PlaybackController.stop()
+            toast("Playback stopped — it would have been recorded")
+        }
         recorded.clear()
         recLastEnd = 0L
         OverlayBus.setRecording(true)

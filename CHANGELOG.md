@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Recording while a macro is playing no longer captures the app's own
+  gestures.** Nothing prevented starting the recorder mid-playback. The capture
+  layer sees injected gestures exactly like a finger, and because a gesture is
+  tracked with a single down-point, the two streams interleaved — producing
+  swipes that started at the playback's coordinates and ended at the user's,
+  alongside hundreds of copies of the played tap. Pressing record now stops
+  playback first and says so; pressing play while the recorder or point picker
+  is up is refused with a message instead of silently corrupting the recording.
+
 - **The root engine no longer disables itself permanently after one failed
   shell write.** `RootGestureEngine.available` was set to `false` on the first
   failure and never reset — and because both `EngineProvider.resolve()` and
