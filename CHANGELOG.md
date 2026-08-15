@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The root engine no longer disables itself permanently after one failed
+  shell write.** `RootGestureEngine.available` was set to `false` on the first
+  failure and never reset — and because both `EngineProvider.resolve()` and
+  `PlaybackController.start()` gate on `isAvailable()`, the write path was never
+  reached again, so nothing could ever clear it. A single transient hiccup (a
+  root prompt timing out, the shell being OOM-killed, Magisk re-authorising)
+  silently dropped *Auto* mode to the accessibility engine for the rest of the
+  process, until the user force-stopped the app. The flag is now a short
+  cooldown that any successful write clears, which mirrors `RootShell.write()`
+  already closing a dead shell so the next call respawns `su`.
+
 ### Documentation
 
 - Backfilled this changelog for every release from 1.0.0 onward.
