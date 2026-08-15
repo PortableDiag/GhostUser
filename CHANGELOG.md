@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-08-15
+
+First release verified by actually running the app: the floating panel, the
+gesture recorder, the point picker, playback and macro import/export were all
+exercised on an Android 15 device before shipping.
+
 ### Fixed
 
 - **Recording while a macro is playing no longer captures the app's own
@@ -43,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README: documented three features that shipped undocumented — the on-screen
   **gesture recorder**, the panel's **⟳ loop-override** toggle, and **macro
   import/export**. The floating panel is now described as it actually is: a
-  draggable bubble that expands into a seven-control row.
+  draggable bubble that expands into an eight-control row.
 - README: corrected the theme description. It claimed a "near-black surface,
   gold accent, selectable accent palette"; the app actually ships a Material 3
   DayNight palette with a blue primary and no accent picker.
@@ -145,7 +151,8 @@ Initial release.
 - Material 3 DayNight theme (blue primary, full light and dark sets) with a
   System / Light / Dark selector.
 
-[Unreleased]: https://github.com/PortableDiag/GhostUser/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/PortableDiag/GhostUser/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/PortableDiag/GhostUser/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/PortableDiag/GhostUser/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/PortableDiag/GhostUser/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/PortableDiag/GhostUser/compare/v1.0.2...v1.0.3

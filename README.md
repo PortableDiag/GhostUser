@@ -34,7 +34,9 @@ preference.
   remembered across reboots and app restarts.
 - **On-screen gesture recorder** — hit ● and use the screen normally. Taps, long
   presses and swipes are captured with the real pauses between them and saved as
-  a macro you can replay or edit.
+  a macro you can replay or edit. If a macro is playing when you start
+  recording, playback stops first — otherwise the recorder would capture the
+  app's own injected taps as if you had made them.
 - **On-screen point picker** — tap targets directly on the screen to add them as
   taps to a macro. No pixel-coordinate guesswork.
 - **Loop controls** — repeat N times or forever, with a configurable interval
